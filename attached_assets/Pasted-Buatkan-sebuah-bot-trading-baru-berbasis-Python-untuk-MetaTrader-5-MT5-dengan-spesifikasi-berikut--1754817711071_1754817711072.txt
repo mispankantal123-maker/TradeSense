@@ -1,0 +1,71 @@
+Buatkan sebuah bot trading baru berbasis Python untuk MetaTrader 5 (MT5) dengan spesifikasi berikut:
+
+1. **Platform Target**
+   - Sistem operasi: Windows 64-bit.
+   - Harus berjalan mulus di Replit, Python local, dan Windows executable (via pyinstaller).
+   - Kompatibel penuh dengan MetaTrader5 Python API.
+   - Mendukung live trading real account dan demo.
+
+2. **GUI**
+   - Gunakan `tkinter` dengan layout, warna, font, dan fungsi identik seperti file `bobot2.py` yang saya berikan.
+   - Semua tab, tombol, dropdown, input, label, log window, dan update interval sama persis posisinya.
+   - Pastikan GUI non-blocking (gunakan `threading` atau `after()` loop), sehingga bot tidak freeze saat trading.
+   - Event handler tombol (Start, Stop, Buy, Sell, dsb.) terhubung ke fungsi eksekusi trading.
+   - Log trading dan status MT5 real-time ditampilkan di panel log GUI.
+
+3. **Fungsi & Fitur Trading**
+   - Salin semua fungsi dari `bobot2.py` untuk:
+     - Validasi simbol.
+     - Auto-detect gold symbol.
+     - Hitung pip value, auto-lot, TP/SL berbagai unit (pips, harga, %, mata uang).
+     - Validasi kondisi trading.
+     - Eksekusi order dengan error handling & retry.
+     - Manajemen sesi trading (Asia, London, New York, Overlap).
+   - Tingkatkan akurasi strategi analisis:
+     - Tambahkan indikator teknikal lanjutan (RSI, MACD, EMA multi-timeframe, ATR filter).
+     - Tambahkan filter volatilitas & deteksi high-impact news.
+     - Tambahkan AI signal generator (misal: machine learning berbasis data OHLCV 200 candle terakhir).
+     - Multi-strategy mode: Scalping, HFT, Intraday, Arbitrage — semua dapat dikonfigurasi.
+
+4. **Optimisasi Koneksi MT5**
+   - Koneksi harus auto-reconnect jika terputus.
+   - Sebelum trading, bot cek status login, koneksi server, simbol aktif, market open.
+   - Panggilan ke API MT5 dibungkus dengan retry dan timeout agar tidak freeze.
+   - Mendukung aktivasi simbol otomatis di Market Watch.
+
+5. **Risk Management**
+   - Auto-lot berdasarkan persentase risiko.
+   - Batas harian loss (daily max loss) dan target profit.
+   - Trailing stop otomatis.
+   - Batas jumlah posisi terbuka.
+   - Deteksi drawdown dan auto-stop trading jika melampaui batas.
+
+6. **Performa & Keamanan**
+   - Thread-safe untuk semua operasi trading.
+   - Gunakan garbage collection untuk membersihkan memori setiap loop.
+   - Pisahkan thread untuk GUI update dan loop trading.
+   - Log semua event ke file di folder `logs/` otomatis.
+   - Variabel sensitif (Telegram token, chat ID) ambil dari environment variable.
+
+7. **Tambahan Fitur Melebihi bobot2.py**
+   - Auto-update bot (cek versi di server GitHub atau API).
+   - Mode backtest langsung di GUI.
+   - Multi-symbol scanning dengan watchlist custom.
+   - Push notifikasi Telegram untuk sinyal & eksekusi order.
+   - Heatmap pasar di GUI (opsional).
+   - Export laporan harian ke CSV.
+
+8. **Kualitas Kode**
+   - Bersih, terstruktur, PEP8 compliant.
+   - Semua fungsi memiliki docstring jelas.
+   - Tangani semua exception secara spesifik, bukan generic `except`.
+   - Tidak ada blocking infinite loop di thread utama.
+   - Semua parameter strategi disimpan & dimuat otomatis (JSON config file).
+   - Gunakan modular design (pisahkan file untuk gui.py, trading.py, utils.py, dsb.).
+
+Hasil akhir:
+- File siap dijalankan di Windows dengan `python main.py`.
+- GUI identik dengan bobot2.py.
+- Sistem analisis dan eksekusi lebih canggih.
+- Bebas freeze saat digunakan live trading.
+- Tidak memerlukan audit ulang besar-besaran karena semua fitur, GUI, dan sistem telah tervalidasi.
