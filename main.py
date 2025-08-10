@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from gui import TradingBotGUI
 from trading import TradingEngine
 from config import ConfigManager
+from telegram_bot import TelegramBot
 from utils import logger, ensure_log_directory
 try:
     import MetaTrader5 as mt5
@@ -34,6 +35,7 @@ class MT5TradingBot:
         self.gui = None
         self.trading_engine = None
         self.config_manager = None
+        self.telegram_bot = None
         self.running = False
         
     def initialize(self) -> bool:
@@ -53,11 +55,18 @@ class MT5TradingBot:
             self.root = tk.Tk()
             self.gui = TradingBotGUI(self.root, self.config_manager)
             
+            # Initialize Telegram bot
+            self.telegram_bot = TelegramBot(self.config_manager)
+            
             # Initialize trading engine
-            self.trading_engine = TradingEngine(self.config_manager, self.gui)
+            self.trading_engine = TradingEngine(self.config_manager, self.gui, self.telegram_bot)
             
             # Connect GUI to trading engine
             self.gui.set_trading_engine(self.trading_engine)
+            
+            # Send startup notification
+            if self.telegram_bot.enabled:
+                self.telegram_bot.send_message("🚀 MT5 Advanced Trading Bot Started Successfully!")
             
             logger("✅ Bot initialization completed successfully")
             return True
@@ -96,6 +105,10 @@ class MT5TradingBot:
         try:
             logger("🛑 Shutting down trading bot...")
             self.running = False
+            
+            # Send shutdown notification
+            if self.telegram_bot and self.telegram_bot.enabled:
+                self.telegram_bot.send_message("🛑 MT5 Trading Bot Shutting Down")
             
             # Stop trading engine
             if self.trading_engine:

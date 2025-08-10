@@ -80,9 +80,9 @@ class ConfigManager:
             "news_buffer_minutes": 30,
             
             # Telegram settings
-            "telegram_enabled": False,
-            "telegram_token": os.getenv("TELEGRAM_TOKEN", ""),
-            "telegram_chat_id": os.getenv("TELEGRAM_CHAT_ID", ""),
+            "telegram_enabled": True,
+            "telegram_token": os.getenv("TELEGRAM_TOKEN", "8365734234:AAH2uTaZPDD47Lnm3y_Tcr6aj3xGL-bVsgk"),
+            "telegram_chat_id": os.getenv("TELEGRAM_CHAT_ID", "5061106648"),
             "telegram_notifications": {
                 "trades": True,
                 "errors": True,

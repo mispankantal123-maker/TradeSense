@@ -67,7 +67,7 @@
     "symbol": "XAUUSD",
     "symbol_rotation": false,
     "telegram_chat_id": "",
-    "telegram_enabled": false,
+    "telegram_enabled": true,
     "telegram_notifications": {
         "connections": false,
         "daily_summary": true,
