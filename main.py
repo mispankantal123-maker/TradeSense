@@ -59,7 +59,7 @@ class MT5TradingBot:
             self.telegram_bot = TelegramBot(self.config_manager)
             
             # Initialize trading engine
-            self.trading_engine = TradingEngine(self.config_manager, self.gui, self.telegram_bot)
+            self.trading_engine = TradingEngine(self.config_manager, self.gui)
             
             # Connect GUI to trading engine
             self.gui.set_trading_engine(self.trading_engine)

@@ -1,0 +1,279 @@
+Audit Final — Pemantapan Bot Trading (Gabungan lengkap + Manual Symbol Input)
+Dokumen ini adalah final audit yang menggabungkan seluruh temuan, acceptance criteria, checklist teknis, test plan, contoh test script, mitigasi failure, dan tambahan fitur manual symbol input / dropdown yang kamu minta. Tujuan: membuat bot baru yang identik GUI dengan bobot2.py, lebih kuat di sistem analisis & risk, dan 100% siap live trading di Windows tanpa freeze.
+
+Ringkasan tujuan
+GUI identik dengan bobot2.py (semua widget, layout, log, event).
+
+Bot tidak freeze pada Windows (GUI non-blocking, background threads).
+
+Koneksi MT5 robust: connect/disconnect, auto-reconnect, symbol activation.
+
+Auto order berdasarkan analisis (AI + indikator), menggunakan TP/SL per-strategy dari GUI.
+
+Tambahan: input symbol manual + dropdown populated dari MT5, validasi & activation.
+
+Observabilitas: logs, Telegram alerts, config persistence.
+
+Coverage testing: unit + integration (mock MT5), semi-automated GUI checks.
+
+Acceptance criteria (kondisi lulus)
+GUI
+
+Semua widget seperti bobot2.py tampil identik.
+
+Tombol: Connect MT5, Disconnect, Start, Stop, Buy, Sell, Validate Symbol, Refresh Symbols.
+
+Inputs: TP, SL (per strategy), lot, auto-lot toggle, risk percent, manual symbol entry, strategy dropdown, combobox symbol list.
+
+Real-time log panel (ScrolledText) menampilkan event dan tetap responsif.
+
+Symbol handling
+
+Manual symbol input + Validate button berfungsi (sanitize, try variations, mt5.symbol_select).
+
+Dropdown terisi dari mt5.symbols_get() saat MT5 connected; fallback list jika tidak.
+
+Symbol disimpan per-strategy di config.json dan dimuat saat startup.
+
+Saat symbol berubah di GUI, semua modul trading (AI, open_order, validate_tp_sl, auto-lot) menggunakan symbol terbaru secara atomik (race-safe).
+
+MT5 & order execution
+
+Connect/Disconnect bekerja; terminal_info & account_info ditampilkan.
+
+Auto-reconnect dengan retry + exponential backoff + jitter.
+
+open_order memakai TP/SL yang diparse dari GUI (unit pips, price, %, currency).
+
+Order gagal → retry policy / alert; semua order dicatat ke logs/ dan GUI positions panel.
+
+Stabilitas & performa
+
+Bot dapat berjalan continuous 24 jam di Windows dalam sintesis (mock ticks) tanpa UI freeze.
+
+Semua MT5/komputasi berat di background thread; komunikasi GUI via queue/tk.after.
+
+Tidak ada memory leak signifikan (garbage collection periodik).
+
+Analisis & AI
+
+Indikator teknikal tersedia (RSI, MACD, EMA multi-TF, ATR, BB, Stochastic).
+
+AISignalGenerator mengeluarkan signal + confidence score; strategy dropdown memengaruhi parameter.
+
+Multi-timeframe confirmation dan volatility/regime filter diimplementasikan.
+
+Observability & Alerts
+
+Rotating file logs di logs/ (timestamped).
+
+Telegram notifications for connect/disconnect, critical errors, orders executed, TP/SL hits.
+
+Heartbeat file/label yang update periodik; missing heartbeat → alert.
+
+Testing
+
+Unit tests untuk fungsi kritikal (parse TP/SL, pip calc, auto-lot, validate symbol).
+
+Integration tests using Mock MT5 to simulate full flow.
+
+GUI widget callback tests (programmatic triggers) untuk tombol penting.
+
+Minimum readiness confidence after passing tests: ≥ 90%.
+
+Checklist Teknis & Steps Verifikasi (terperinci)
+A. Persiapan lingkungan
+ Windows x64, Python 3.9+ (64-bit)
+
+ MT5 desktop terinstall, login demo/test
+
+ pip install -r requirements.txt (MetaTrader5, pandas, numpy, pytest, pytest-mock, python-telegram-bot (opsional), psutil)
+
+ Set env vars: TELEGRAM_TOKEN, TELEGRAM_CHAT_ID (opsional)
+
+B. Startup & Sanity
+ python main.py → GUI muncul identik tanpa tracebacks.
+
+ Config (config.json) ter-load; default per-strategy muncul.
+
+ Logs directory logs/ dibuat.
+
+C. MT5 connection flow
+ Click Connect → mt5.initialize() berhasil atau perlihatkan solusi jika gagal.
+
+ Account info & terminal info muncul di GUI.
+
+ Click Disconnect → mt5.shutdown() dan GUI status update.
+
+D. Symbol widget flow (baru / tambahan)
+ Combobox combobox_symbol_list terisi saat connected (atau fallback jika tidak).
+
+ Entry entry_symbol_manual + button_validate_symbol:
+
+sanitize input (strip, upper)
+
+coba variations list (XAUUSD, XAUUSDm, GOLD, etc.)
+
+jika MT5 connected → panggil validate_and_activate_symbol() → update label_symbol_status
+
+save per-strategy ke config ketika valid
+
+ Button Refresh Symbols reload list dari MT5
+
+ Symbol changes are thread-safe (use trade_lock) and saved.
+
+E. GUI functionality
+ Strategy dropdown mempengaruhi TP/SL default di UI.
+
+ Start → trading loop background thread aktif.
+
+ Stop → clean shutdown (thread join, resources freed).
+
+ Manual Buy/Sell → memanggil open_order dengan symbol dari GUI.
+
+ Log panel menerima updates tanpa blocking.
+
+F. Trading & risk
+ AI signal generator menghasilkan signal + confidence.
+
+ open_order menerapkan TP/SL parsed dari GUI per-unit.
+
+ Auto-lot calculates correctly based on risk% and symbol constraints.
+
+ Position limit enforced; drawdown stop enforced.
+
+G. Robustness tests
+ Simulate ticks at high rate via Mock MT5 → UI tetap responsif.
+
+ Force MT5 disconnect during trading → bot safe-mode, retries.
+
+ Memory usage stable in long-run simulation.
+
+H. Persistence & reporting
+ Config save/load works.
+
+ Daily report CSV export works.
+
+ Telegram notifications testable.
+
+Test Plan (Manual + Automated)
+Manual test cases (priority)
+Start app → Connect MT5 → verify account info & symbols load.
+
+Set Strategy = Scalping, set TP=15 pips & SL=8 pips, set symbol via dropdown or manual input → Start bot → inject mock BUY signal → verify mt5.order_send called with symbol, TP/SL correctly calculated.
+
+While running, change symbol → verify atomic switch and subsequent orders use new symbol.
+
+Force MT5 disconnect → verify safe-mode, retry attempts, notifications.
+
+Click Stop → confirm threads stop, GUI remains responsive.
+
+Automated tests (pytest)
+Unit tests:
+
+parse_tp_sl_input() edge cases: pips, price, %, currency conversion fallbacks.
+
+calculate_pip_value() for JPY, XAU, forex, crypto mocks.
+
+calculate_auto_lot_size() with mocked symbol_info & account_info.
+
+validate_and_activate_symbol() with mock symbols list (test variations).
+
+Integration tests (Mock MT5):
+
+Flow: connect → select symbol → generate signal → open_order → assert mt5.order_send called with correct payload (symbol, volume, tp, sl).
+
+Symbol change in-flight: simulate lock & ensure no race condition.
+
+GUI tests:
+
+Programmatically call callbacks for Validate Symbol, Refresh Symbols, Start, Stop, Buy, Sell — assert expected state changes.
+
+Contoh Snippet Tests (diletakkan di tests/)
+tests/test_symbol_validate.py
+
+python
+Copy
+Edit
+def test_validate_symbol_variations(monkeypatch):
+    # monkeypatch mt5.symbols_get and mt5.symbol_info to simulate broker symbols
+    ...
+    # assert validate_and_activate_symbol returns expected variant
+tests/test_open_order_integration.py
+
+python
+Copy
+Edit
+def test_open_order_uses_selected_symbol(monkeypatch):
+    # setup mock mt5 with symbol info, tick, order_send spy
+    # set gui.selected_symbol = "EURUSD"
+    # call open_order(...)
+    # assert mt5.order_send called with "symbol": "EURUSD"
+Config schema (contoh config.json)
+json
+Copy
+Edit
+{
+  "global": {
+    "telegram_enabled": true,
+    "preferred_symbols": ["EURUSD","XAUUSD","USDJPY"]
+  },
+  "strategies": {
+    "Scalping": {
+      "enabled": true,
+      "symbol": "EURUSD",
+      "tp": "15",
+      "tp_unit": "pips",
+      "sl": "8",
+      "sl_unit": "pips",
+      "risk_percent": 1.0,
+      "auto_lot": false
+    },
+    "HFT": { "...": "..." },
+    "Intraday": { "...": "..." },
+    "Arbitrage": { "...": "..." }
+  }
+}
+Logging & Observability detail
+RotatingFileHandler (max 10MB, keep 7) under logs/.
+
+Log format: YYYY-MM-DD HH:MM:SS [LEVEL] module: message.
+
+Log events: CONNECT, DISCONNECT, VALIDATE_SYMBOL, ACTIVATE_SYMBOL, ORDER_SENT (payload summary), ORDER_RESULT, ERROR, HEARTBEAT.
+
+Telegram messages for significant events (configurable).
+
+Common failure modes & mitigasi (ringkas)
+UI freeze → pastikan MT5 calls & heavy compute off main thread; use queue + tk.after.
+
+Symbol mismatch → always pass symbol param explicitly to trading functions; persist per-strategy.
+
+High spread / non-tradable symbol → warn & block order; allow override with confirmation.
+
+Race condition when switching symbol → use trade_lock to guard order submission and symbol updates.
+
+Memory leak → limit history window, call gc.collect() periodically, avoid accumulating DataFrame global lists.
+
+Roadmap pelaksanaan & estimasi waktu
+Gabung fitur symbol & GUI wiring (patch) — 0.5 — 1 hari
+
+Implement full validate_and_activate_symbol + persistence — 0.5 hari
+
+Unit tests + Mock MT5 integration tests — 0.5 — 1 hari
+
+Stress test / memory profiling — 0.5 hari
+
+Final verification & sign-off — 0.5 hari
+
+Total estimasi: 2 — 4 hari kerja (bergantung prioritas parallel tasks).
+
+Output deliverables setelah implementasi & tes lulus
+main.py, gui.py, trading.py, utils.py, config.json (sample), requirements.txt
+
+logs/ (rotating)
+
+tests/ (pytest suite) + instruction pytest -q
+
+Deployment notes: build via pyinstaller untuk Windows, service mode recommendations.
+
+Final audit report (pass/fail checklist with logs & screenshots).
